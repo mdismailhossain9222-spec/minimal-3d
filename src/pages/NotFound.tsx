@@ -1,26 +1,32 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router";
+import { NovaButton } from "@/components/store/primitives";
 
 export default function NotFound() {
   return (
-    <motion.div
+    <motion.main
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
+      transition={{ duration: 0.6 }}
+      className="bg-nova-aurora relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
     >
-
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-lg text-gray-600">Page Not Found</p>
-            </div>
-          </div>
-        </div>
+      <div className="grain absolute inset-0" />
+      <p className="font-label relative text-muted-foreground">Error 404</p>
+      <h1 className="relative mt-6 text-[26vw] leading-none font-bold tracking-tighter sm:text-[10rem]">
+        <span className="text-nova-gradient">404</span>
+      </h1>
+      <p className="relative mt-4 max-w-md text-sm leading-6 text-muted-foreground">
+        This page drifted out of orbit. The collection, however, is exactly
+        where we left it.
+      </p>
+      <div className="relative mt-10 flex flex-wrap items-center justify-center gap-4">
+        <NovaButton asChild>
+          <Link to="/">Back to home</Link>
+        </NovaButton>
+        <NovaButton asChild variant="secondary">
+          <Link to="/shop">Browse the shop</Link>
+        </NovaButton>
       </div>
-    </motion.div>
+    </motion.main>
   );
 }

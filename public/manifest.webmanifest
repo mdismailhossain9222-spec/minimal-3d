@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "NOVA — Designed for the Next Generation",
+  "short_name": "NOVA",
+  "description": "A futuristic lifestyle brand. Apparel, accessories, sneakers, tech and objects, engineered from quiet geometry.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "/logo.png",

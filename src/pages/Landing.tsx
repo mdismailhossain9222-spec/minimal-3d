@@ -1,27 +1,20 @@
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ArrowDown, ArrowUpRight, Asterisk } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import MonolithScene from "@/components/three/MonolithScene";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { ArrowDown, ArrowRight } from "lucide-react";
+import ProductCard from "@/components/store/ProductCard";
+import ProductArt from "@/components/store/ProductArt";
+import { Eyebrow, NovaButton, Section } from "@/components/store/primitives";
+import { CATEGORIES, PRODUCTS } from "@/lib/catalog";
+import { cn } from "@/lib/utils";
 
-gsap.registerPlugin(ScrollTrigger);
+const NovaScene = lazy(() => import("@/components/three/NovaScene"));
+const ProductScene = lazy(() => import("@/components/three/ProductScene"));
 
-/* ---------------------------------------------------------------- */
-/*  Small shared bits                                                */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Shared bits                                                        */
+/* ------------------------------------------------------------------ */
 
-function Eyebrow({ index, label }: { index: string; label: string }) {
-  return (
-    <div className="flex items-center gap-3 text-muted-foreground">
-      <span className="font-label">{index}</span>
-      <span className="h-px w-8 bg-border" />
-      <span className="font-label">{label}</span>
-    </div>
-  );
-}
-
-/** Fade-up reveal, once, on scroll. */
 function Reveal({
   children,
   delay = 0,
@@ -31,350 +24,541 @@ function Reveal({
   delay?: number;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 36 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1.1,
-          delay,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 88%",
-            toggleActions: "play none none none",
-          },
-        },
-      );
-    });
-    return () => ctx.revert();
-  }, [delay]);
+  const reduce = useReducedMotion();
   return (
-    <div ref={ref} className={className}>
+    <motion.div
+      initial={reduce ? undefined : { opacity: 0, y: 36 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-/* ---------------------------------------------------------------- */
-/*  Sections                                                         */
-/* ---------------------------------------------------------------- */
-
-function Header() {
-  return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      <div className="border-b border-border/70 bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <Asterisk className="size-4" strokeWidth={1.5} />
-            <span className="text-sm font-medium tracking-[0.18em]">MONO/LITH</span>
-          </Link>
-          <nav className="hidden items-center gap-8 md:flex">
-            {["Work", "Studio", "Contact"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {item}
-              </a>
-            ))}
-          </nav>
-          <Link
-            to="/dashboard"
-            className="inline-flex h-9 items-center border border-foreground bg-foreground px-5 text-[13px] font-medium tracking-wide text-primary-foreground transition-colors hover:bg-foreground/85"
-          >
-            Enter studio
-          </Link>
-          <a href="#work" className="text-sm underline-offset-4 hover:underline md:hidden">
-            Work
-          </a>
-        </div>
-      </div>
-    </header>
-  );
-}
+/* ------------------------------------------------------------------ */
+/*  01 — Hero                                                          */
+/* ------------------------------------------------------------------ */
 
 function Hero() {
-  const titleRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = titleRef.current;
-    if (!el) return;
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.fromTo(
-        el.children,
-        { opacity: 0, y: 44 },
-        { opacity: 1, y: 0, duration: 1.1, stagger: 0.12, delay: 0.25 },
-      );
-    });
-    return () => ctx.revert();
-  }, []);
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const sceneY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
+  const copyY = useTransform(scrollYProgress, [0, 1], ["0%", "38%"]);
+  const fade = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
   return (
-    <section className="relative flex min-h-[100svh] flex-col">
+    <section ref={ref} className="relative flex min-h-[100svh] flex-col overflow-hidden">
+      {/* Aurora field */}
+      <div className="bg-nova-aurora absolute inset-0" />
+      <div className="grain absolute inset-0" />
       {/* WebGL layer */}
-      <div className="absolute inset-0 z-0">
-        <MonolithScene />
-      </div>
-      {/* Hairline frame over the canvas */}
-      <div className="pointer-events-none absolute inset-x-6 inset-y-6 z-10 hidden border md:block" />
-      <div className="relative z-20 mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
-        {/* Copy block — left aligned, canvas breathes to the right */}
-        <div className="flex flex-1 flex-col justify-end pb-24 pt-40 md:pb-32">
-          <div ref={titleRef} className="max-w-xl">
-            <Eyebrow index="01" label="WebGL Studio" />
-            <h1 className="mt-8 font-display text-6xl leading-[1.02] font-light tracking-tight sm:text-7xl lg:text-8xl">
-              Form,<br />
-              held in<br />
-              <span className="italic">stillness.</span>
+      <motion.div style={{ y: sceneY }} className="absolute inset-0 z-0">
+        <Suspense fallback={null}>
+          <NovaScene />
+        </Suspense>
+      </motion.div>
+
+      <motion.div style={{ opacity: fade }} className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
+        <div className="flex flex-1 flex-col justify-end pb-28 pt-44 md:pb-36">
+          <motion.div
+            initial={{ opacity: 0, y: 44 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-2xl"
+          >
+            <Eyebrow index="01" label="The Collection — FW26" tone="onDark" />
+            <h1 className="mt-8 text-[13vw] leading-[0.98] font-semibold tracking-[-0.03em] text-foreground sm:text-7xl lg:text-[5.5rem]">
+              Designed for the
+              <br />
+              <span className="text-nova-gradient">next generation.</span>
             </h1>
-            <p className="mt-8 max-w-md text-[15px] leading-7 text-muted-foreground">
-              We build immersive 3D for the web — quiet geometry, exacting
-              light, and interactions that get out of the way. Nothing extra.
+            <p className="mt-7 max-w-md text-[15px] leading-7 text-muted-foreground">
+              NOVA is a futuristic lifestyle brand. Apparel, accessories and
+              objects engineered from quiet geometry — built to be worn, used
+              and kept for years, not seasons.
             </p>
-            <div className="mt-10 flex items-center gap-4">
-              <Link
-                to="/dashboard"
-                className="group inline-flex h-11 items-center gap-2 border border-foreground bg-foreground px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground/85"
-              >
-                Begin a project
-                <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <NovaButton asChild variant="primary" size="lg">
+                <Link to="/shop">
+                  Shop the collection
+                  <ArrowRight className="size-4 transition-transform duration-300 group-hover/nbtn:translate-x-0.5" />
+                </Link>
+              </NovaButton>
+              <NovaButton asChild variant="onDark" size="lg">
+                <a href="#featured-collection">Explore NOVA</a>
+              </NovaButton>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Bottom strip */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 1 }}
+          className="flex items-center justify-between border-t border-white/10 py-5 text-muted-foreground"
+        >
+          <span className="font-label">Scroll to explore</span>
+          <ArrowDown className="size-4 animate-bounce" strokeWidth={1.5} />
+          <span className="font-label">FW26 / 001</span>
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  02 — Featured products                                             */
+/* ------------------------------------------------------------------ */
+
+function FeaturedProducts() {
+  const featured = PRODUCTS.filter((p) => p.featured);
+  return (
+    <Section className="border-t border-white/5 bg-background">
+      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
+        <Reveal>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <Eyebrow index="02" label="Featured products" />
+              <h2 className="mt-7 max-w-xl text-4xl leading-[1.06] font-semibold tracking-tight sm:text-5xl">
+                Objects of intent.
+              </h2>
+              <p className="mt-4 max-w-md text-[15px] leading-7 text-muted-foreground">
+                Six pieces from the current collection — each one reduced to
+                its essential form, then built to last.
+              </p>
+            </div>
+            <NovaButton asChild variant="secondary">
+              <Link to="/shop">
+                View all products
+                <ArrowRight className="size-4" />
               </Link>
-              <a
-                href="#work"
-                className="inline-flex h-11 items-center border-b border-transparent px-2 text-sm text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+            </NovaButton>
+          </div>
+        </Reveal>
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {featured.map((p, i) => (
+            <ProductCard key={p.id} product={p} index={i} />
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  03 — Categories                                                    */
+/* ------------------------------------------------------------------ */
+
+const CATEGORY_ART: Record<string, string> = {
+  new: "#8D63E8",
+  clothing: "#2E2E36",
+  accessories: "#3A3A42",
+  sneakers: "#5D7BFF",
+  tech: "#8E93A6",
+  lifestyle: "#9DA2B4",
+};
+
+function Categories() {
+  return (
+    <Section className="border-t border-white/5 bg-carbon">
+      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
+        <Reveal>
+          <Eyebrow index="03" label="Categories" />
+          <h2 className="mt-7 max-w-xl text-4xl leading-[1.06] font-semibold tracking-tight sm:text-5xl">
+            Choose your orbit.
+          </h2>
+        </Reveal>
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {CATEGORIES.map((cat, i) => (
+            <Reveal key={cat.id} delay={i * 0.05}>
+              <Link
+                to={`/shop?category=${cat.id}`}
+                className="group relative flex h-56 flex-col justify-end overflow-hidden rounded-lg border border-white/10 p-6 transition-all duration-500 hover:border-electric/50"
               >
-                View work
-              </a>
+                {/* Art panel — tone + oversized monogram */}
+                <div
+                  className="absolute inset-0 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]"
+                  style={{
+                    background: `radial-gradient(120% 100% at 30% 20%, ${CATEGORY_ART[cat.id]}22 0%, #101016 70%)`,
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute -right-3 -bottom-8 text-[7rem] leading-none font-bold tracking-tighter text-white/[0.05] transition-all duration-500 group-hover:text-white/[0.09]"
+                >
+                  {cat.label.slice(0, 2).toUpperCase()}
+                </span>
+                <div className="relative">
+                  <span className="font-label text-muted-foreground">{cat.note}</span>
+                  <div className="mt-2 flex items-center gap-3">
+                    <h3 className="text-xl font-medium tracking-tight">{cat.label}</h3>
+                    <ArrowRight className="size-4 text-electric opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100" />
+                  </div>
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  04 — Featured collection (editorial + 3D)                          */
+/* ------------------------------------------------------------------ */
+
+function FeaturedCollection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const yA = useTransform(scrollYProgress, [0, 1], ["6%", "-6%"]);
+  const yB = useTransform(scrollYProgress, [0, 1], ["-8%", "8%"]);
+  const reduce = useReducedMotion();
+
+  const marquee = PRODUCTS.filter((p) => p.new || p.bestseller).slice(0, 8);
+  const orbit = PRODUCTS.find((p) => p.slug === "orbit-runner-sneakers");
+  const aegis = PRODUCTS.find((p) => p.slug === "aegis-01-shell-jacket");
+
+  return (
+    <Section id="featured-collection" className="border-t border-white/5 bg-background">
+      <div ref={ref} className="mx-auto max-w-6xl px-6 py-24 md:py-32">
+        <Reveal>
+          <Eyebrow index="04" label="Featured collection" />
+          <h2 className="mt-7 max-w-2xl text-4xl leading-[1.06] font-semibold tracking-tight sm:text-5xl">
+            The FW26{" "}
+            <span className="text-nova-gradient">Orbit</span> collection.
+          </h2>
+        </Reveal>
+
+        {/* Asymmetric editorial layout */}
+        <div className="mt-16 grid items-center gap-10 lg:grid-cols-12">
+          <motion.div style={{ y: reduce ? undefined : yA }} className="lg:col-span-5">
+            {aegis && (
+              <Link
+                to={`/product/${aegis.slug}`}
+                className="group block overflow-hidden rounded-lg border border-white/10"
+              >
+                <div className="aspect-[4/5] transition-transform duration-700 group-hover:scale-[1.03]">
+                  <ProductArt product={aegis} className="h-full w-full" />
+                </div>
+                <div className="flex items-center justify-between border-t border-white/10 p-5">
+                  <div>
+                    <p className="font-label text-muted-foreground">Outerwear</p>
+                    <p className="mt-1 text-sm font-medium">{aegis.name}</p>
+                  </div>
+                  <span className="font-label text-electric">Aegis 01</span>
+                </div>
+              </Link>
+            )}
+          </motion.div>
+
+          <div className="lg:col-span-3">
+            <Reveal delay={0.1}>
+              <p className="text-[15px] leading-7 text-muted-foreground">
+                One idea carried the whole way: a single silhouette language,
+                a controlled palette, hardware you can feel. FW26 pairs the
+                Aegis shell system with the Orbit sole unit — storm proof and
+                rail stable, from the same drawing board.
+              </p>
+              <NovaButton asChild variant="secondary" className="mt-8">
+                <Link to="/collections">
+                  Explore the collection
+                  <ArrowRight className="size-4" />
+                </Link>
+              </NovaButton>
+            </Reveal>
+          </div>
+
+          <motion.div style={{ y: reduce ? undefined : yB }} className="lg:col-span-4">
+            {orbit && (
+              <Link
+                to={`/product/${orbit.slug}`}
+                className="group block overflow-hidden rounded-lg border border-white/10"
+              >
+                <div className="aspect-square transition-transform duration-700 group-hover:scale-[1.03]">
+                  <ProductArt product={orbit} className="h-full w-full" />
+                </div>
+                <div className="flex items-center justify-between border-t border-white/10 p-5">
+                  <div>
+                    <p className="font-label text-muted-foreground">Footwear</p>
+                    <p className="mt-1 text-sm font-medium">{orbit.name}</p>
+                  </div>
+                  <span className="font-label text-magenta-neon">Orbit</span>
+                </div>
+              </Link>
+            )}
+          </motion.div>
+        </div>
+
+        {/* 3D showcase strip */}
+        <Reveal delay={0.05} className="mt-16">
+          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-nova-gradient">
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 pt-5">
+              <span className="font-label text-muted-foreground">Object study — 03</span>
+              <span className="font-label text-muted-foreground">r3f · live</span>
+            </div>
+            <Suspense fallback={<div className="h-[380px]" />}>
+              <ProductScene className="h-[380px] w-full" />
+            </Suspense>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between p-6">
+              <p className="max-w-xs text-sm leading-6 text-muted-foreground">
+                Every NOVA object begins as a solid. Light does the rest.
+              </p>
+              <span className="font-label hidden text-muted-foreground sm:block">360° study</span>
             </div>
           </div>
-        </div>
-        {/* Bottom hairline strip */}
-        <div className="flex items-center justify-between border-t border-border/70 py-5">
-          <span className="font-label text-muted-foreground">Scroll</span>
-          <ArrowDown className="size-4 animate-bounce text-muted-foreground" strokeWidth={1.5} />
-          <span className="font-label text-muted-foreground">001 / 006</span>
-        </div>
+        </Reveal>
       </div>
-    </section>
+    </Section>
   );
 }
 
-function Manifesto() {
+/* ------------------------------------------------------------------ */
+/*  05 — Showcase (horizontal scroll)                                  */
+/* ------------------------------------------------------------------ */
+
+function Showcase() {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  // Track width drives the travel distance so the row never overshoots on small screens.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(2200);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const update = () => setTrackWidth(el.scrollWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  const x = useTransform(scrollYProgress, [0, 1], ["2%", `calc(-${trackWidth}px + 92vw)`]);
+
+  const items = PRODUCTS.filter((p) => ["orbit-runner-sneakers", "core-indicator-watch", "pulse-ancillary-speaker", "aegis-01-shell-jacket", "halo-ancillary-pack", "monolith-ceramic-mug"].includes(p.slug));
+
+  if (reduce) {
+    return (
+      <Section className="border-t border-white/5 bg-carbon">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <Eyebrow index="05" label="Showcase" />
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {items.slice(0, 3).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      </Section>
+    );
+  }
+
   return (
-    <section id="studio" className="border-t border-border bg-background">
-      <div className="mx-auto grid max-w-6xl gap-16 px-6 py-28 md:grid-cols-12 md:py-36">
-        <Reveal className="md:col-span-4">
-          <Eyebrow index="02" label="The Studio" />
-        </Reveal>
-        <Reveal className="md:col-span-8" delay={0.1}>
-          <h2 className="font-display text-4xl leading-[1.12] font-light tracking-tight sm:text-5xl">
-            Reduction is the discipline. What remains is the work.
-          </h2>
-          <p className="mt-8 max-w-lg text-[15px] leading-7 text-muted-foreground">
-            MONO/LITH is a small studio for real-time 3D on the web. We remove
-            until only the essential form is left — then light it precisely.
-            The result is immersive, but it never shouts.
-          </p>
-          <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
-            Every engagement begins with subtraction: fewer objects, fewer
-            colors, one idea carried the whole way.
-          </p>
-        </Reveal>
+    <Section className="border-t border-white/5 bg-carbon">
+      <div ref={ref} className="relative h-[300vh]">
+        {/* Sticky viewport */}
+        <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+          <div className="mx-auto w-full max-w-6xl px-6">
+            <Eyebrow index="05" label="Showcase" />
+            <h2 className="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">
+              In motion.
+            </h2>
+          </div>
+          <motion.div style={{ x }} ref={trackRef} className="mt-12 flex w-max gap-5 pl-6">
+            {items.map((p) => (
+              <Link
+                key={p.id}
+                to={`/product/${p.slug}`}
+                className="group w-[320px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-card transition-colors hover:border-electric/40 sm:w-[380px]"
+              >
+                <div className="aspect-[4/3] overflow-hidden">
+                  <div className="h-full w-full transition-transform duration-700 group-hover:scale-[1.05]">
+                    <ProductArt product={p} className="h-full w-full" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-5">
+                  <div>
+                    <p className="font-label text-muted-foreground">
+                      {p.category.charAt(0).toUpperCase() + p.category.slice(1)}
+                    </p>
+                    <p className="mt-1 text-sm font-medium">{p.name}</p>
+                  </div>
+                  <ArrowRight className="size-4 text-muted-foreground transition-all duration-300 group-hover:translate-x-1 group-hover:text-electric" />
+                </div>
+              </Link>
+            ))}
+          </motion.div>
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }
 
-const CRAFT = [
+/* ------------------------------------------------------------------ */
+/*  06 — THE FUTURE IS NOW                                             */
+/* ------------------------------------------------------------------ */
+
+function FutureBanner() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const scale = useTransform(scrollYProgress, [0.2, 0.6], [0.92, 1]);
+  const opacity = useTransform(scrollYProgress, [0.25, 0.55], [0, 1]);
+
+  return (
+    <Section className="border-t border-white/5">
+      <div ref={ref} className="bg-nova-aurora relative overflow-hidden">
+        <div className="grain absolute inset-0" />
+        <motion.div
+          style={{ scale, opacity }}
+          className="relative mx-auto flex max-w-6xl flex-col items-center px-6 py-32 text-center md:py-44"
+        >
+          <Eyebrow label="FW26 — Now shipping" tone="onDark" />
+          <h2 className="mt-8 text-[13vw] leading-[0.95] font-bold tracking-[-0.03em] sm:text-8xl lg:text-9xl">
+            THE FUTURE
+            <br />
+            <span className="text-nova-gradient">IS NOW.</span>
+          </h2>
+          <p className="mt-8 max-w-md text-[15px] leading-7 text-muted-foreground">
+            The full FW26 collection is available now. Members get first
+            access to every release — and first refusal on the limited runs.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <NovaButton asChild variant="primary" size="lg">
+              <Link to="/shop?category=new">
+                Shop new arrivals
+                <ArrowRight className="size-4" />
+              </Link>
+            </NovaButton>
+            <NovaButton asChild variant="onDark" size="lg">
+              <Link to="/auth">Join NOVA</Link>
+            </NovaButton>
+          </div>
+        </motion.div>
+      </div>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  07 — About                                                         */
+/* ------------------------------------------------------------------ */
+
+const PRINCIPLES = [
   {
     n: "01",
-    title: "Real-time 3D",
-    body: "WebGL scenes engineered in React Three Fiber — sixty frames, no theatrics.",
+    title: "Reduction is the discipline",
+    body: "We remove until only the essential form is left. What remains is the product — nothing extra.",
   },
   {
     n: "02",
-    title: "Motion direction",
-    body: "GSAP-choreographed reveals and scroll sequences with restraint as the default.",
+    title: "Materials over decoration",
+    body: "Matte shells, engineered knits, machined hardware. We spend on the thing itself, not the story around it.",
   },
   {
     n: "03",
-    title: "Design systems",
-    body: "Type, spacing and tone held to a near-monochrome grid. Precision over decoration.",
+    title: "Built to be kept",
+    body: "Every piece is designed to be repaired, re-proofed and worn for years. Fewer, better objects.",
   },
 ];
 
-function Craft() {
+function About() {
   return (
-    <section className="border-t border-border bg-mist/40">
-      <div className="mx-auto max-w-6xl px-6 py-28 md:py-36">
-        <Reveal>
-          <Eyebrow index="03" label="Practice" />
-          <h2 className="mt-8 max-w-xl font-display text-4xl leading-[1.12] font-light tracking-tight sm:text-5xl">
-            Three disciplines, one grid.
+    <Section id="about" className="border-t border-white/5 bg-background">
+      <div className="mx-auto grid max-w-6xl gap-14 px-6 py-24 md:grid-cols-12 md:py-32">
+        <Reveal className="md:col-span-4">
+          <Eyebrow index="06" label="About NOVA" />
+          <h2 className="mt-7 text-4xl leading-[1.06] font-semibold tracking-tight sm:text-5xl">
+            A small brand with a long attention span.
           </h2>
+          <NovaButton asChild variant="secondary" className="mt-8">
+            <Link to="/about">
+              Read the full story
+              <ArrowRight className="size-4" />
+            </Link>
+          </NovaButton>
         </Reveal>
-        <div className="mt-16 grid gap-px border border-border bg-border md:grid-cols-3">
-          {CRAFT.map((item, i) => (
-            <Reveal key={item.n} delay={i * 0.08}>
-              <div className="group h-full bg-background p-8 transition-colors duration-300 hover:bg-card">
-                <span className="font-label text-muted-foreground">{item.n}</span>
-                <h3 className="mt-10 text-lg font-medium tracking-tight">{item.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.body}</p>
-                <div className="mt-10 h-px w-8 bg-foreground/25 transition-all duration-500 group-hover:w-16" />
+        <div className="md:col-span-8">
+          {PRINCIPLES.map((p, i) => (
+            <Reveal key={p.n} delay={i * 0.06}>
+              <div className="group flex gap-8 border-t border-white/10 py-8 last:border-b">
+                <span className="font-label pt-1.5 text-muted-foreground">{p.n}</span>
+                <div>
+                  <h3 className="text-lg font-medium tracking-tight transition-colors group-hover:text-electric">
+                    {p.title}
+                  </h3>
+                  <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{p.body}</p>
+                </div>
               </div>
             </Reveal>
           ))}
         </div>
       </div>
-    </section>
+    </Section>
   );
 }
 
-const WORKS = [
-  { n: "001", title: "Vessel", meta: "Product configurator — 2025", tone: "Linear" },
-  { n: "002", title: "Aperture", meta: "Gallery archive — 2025", tone: "Grain" },
-  { n: "003", title: "Column", meta: "Editorial WebGL — 2024", tone: "Grid" },
-  { n: "004", title: "Quiet Orbit", meta: "Brand experience — 2024", tone: "Field" },
-];
+/* ------------------------------------------------------------------ */
+/*  Newsletter                                                         */
+/* ------------------------------------------------------------------ */
 
-function Work() {
-  return (
-    <section id="work" className="border-t border-border bg-background">
-      <div className="mx-auto max-w-6xl px-6 py-28 md:py-36">
-        <Reveal>
-          <Eyebrow index="04" label="Selected Work" />
-        </Reveal>
-        <div className="mt-14 border-t border-border">
-          {WORKS.map((w, i) => (
-            <Reveal key={w.n} delay={i * 0.06}>
-              <a
-                href="#work"
-                className="group flex items-baseline justify-between gap-6 border-b border-border py-7 transition-colors hover:bg-card/60"
-              >
-                <div className="flex items-baseline gap-8">
-                  <span className="font-label text-muted-foreground">{w.n}</span>
-                  <span className="font-display text-3xl font-light tracking-tight transition-transform duration-500 group-hover:translate-x-2 sm:text-4xl">
-                    {w.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-8">
-                  <span className="hidden text-sm text-muted-foreground sm:block">{w.meta}</span>
-                  <span className="font-label hidden text-muted-foreground md:block">{w.tone}</span>
-                  <ArrowUpRight
-                    className="size-4 text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
-                    strokeWidth={1.5}
-                  />
-                </div>
-              </a>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+function Newsletter() {
+  const [email, setEmail] = useState("");
+  const [done, setDone] = useState(false);
 
-function Cta() {
   return (
-    <section id="contact" className="border-t border-foreground bg-foreground text-primary-foreground">
-      <div className="mx-auto flex max-w-6xl flex-col items-start gap-12 px-6 py-28 md:py-36">
-        <Reveal className="w-full">
-          <div className="flex items-center gap-3 text-primary-foreground/60">
-            <span className="font-label">05</span>
-            <span className="h-px w-8 bg-primary-foreground/30" />
-            <span className="font-label">Contact</span>
-          </div>
-          <h2 className="mt-10 font-display text-5xl leading-[1.05] font-light tracking-tight sm:text-6xl lg:text-7xl">
-            Say less.
-            <br />
-            <span className="italic text-primary-foreground/80">Show more.</span>
-          </h2>
-          <p className="mt-8 max-w-md text-[15px] leading-7 text-primary-foreground/70">
-            We take on a small number of engagements each season. Tell us what
-            you're building — we'll answer with a plan.
+    <Section className="border-t border-white/5 bg-carbon">
+      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 px-6 py-16 md:flex-row md:items-center">
+        <div>
+          <h3 className="text-2xl font-medium tracking-tight">Get first access.</h3>
+          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Release calendars, early access and field notes. One email a
+            month — never more.
           </p>
-          <div className="mt-12 flex flex-wrap items-center gap-4">
-            <Link
-              to="/dashboard"
-              className="group inline-flex h-11 items-center gap-2 border border-primary-foreground bg-primary-foreground px-6 text-sm font-medium text-foreground transition-colors hover:bg-primary-foreground/85"
-            >
-              Open the studio
-              <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </Link>
-            <a
-              href="mailto:studio@monolith.design"
-              className="inline-flex h-11 items-center border-b border-primary-foreground/30 px-1 text-sm text-primary-foreground/80 transition-colors hover:border-primary-foreground hover:text-primary-foreground"
-            >
-              studio@monolith.design
-            </a>
-          </div>
-        </Reveal>
+        </div>
+        {done ? (
+          <p className="font-label text-electric">You're on the list.</p>
+        ) : (
+          <form
+            className="flex w-full max-w-md gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (email.includes("@")) setDone(true);
+            }}
+          >
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              aria-label="Email address"
+              className="h-11 w-full rounded-md border border-border bg-background px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-electric/60"
+            />
+            <NovaButton type="submit">Subscribe</NovaButton>
+          </form>
+        )}
       </div>
-    </section>
+    </Section>
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-foreground/10 bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-14">
-        <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
-          <div>
-            <div className="flex items-center gap-3">
-              <Asterisk className="size-4" strokeWidth={1.5} />
-              <span className="text-sm font-medium tracking-[0.18em]">MONO/LITH</span>
-            </div>
-            <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">
-              Minimal 3D for the web. Built with React Three Fiber &amp; GSAP.
-            </p>
-          </div>
-          <div className="flex gap-12">
-            <div className="flex flex-col gap-2 text-sm">
-              <span className="font-label text-muted-foreground">Studio</span>
-              <a href="#studio" className="text-muted-foreground transition-colors hover:text-foreground">About</a>
-              <a href="#work" className="text-muted-foreground transition-colors hover:text-foreground">Work</a>
-              <a href="#contact" className="text-muted-foreground transition-colors hover:text-foreground">Contact</a>
-            </div>
-            <div className="flex flex-col gap-2 text-sm">
-              <span className="font-label text-muted-foreground">Elsewhere</span>
-              <a href="#work" className="text-muted-foreground transition-colors hover:text-foreground">Dribbble</a>
-              <a href="#work" className="text-muted-foreground transition-colors hover:text-foreground">Instagram</a>
-              <a href="#work" className="text-muted-foreground transition-colors hover:text-foreground">X</a>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 MONO/LITH Studio. All rights reserved.</span>
-          <span className="font-label">Light, geometry, silence.</span>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-/* ---------------------------------------------------------------- */
-/*  Page                                                             */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
 
 export default function Landing() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <Header />
+    <main className="bg-background text-foreground">
       <Hero />
-      <Manifesto />
-      <Craft />
-      <Work />
-      <Cta />
-      <Footer />
+      <FeaturedProducts />
+      <Categories />
+      <FeaturedCollection />
+      <Showcase />
+      <FutureBanner />
+      <About />
+      <Newsletter />
     </main>
   );
 }
